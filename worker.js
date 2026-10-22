@@ -1,9 +1,9 @@
 
-
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
+    // Сайттағы өтінімді Telegram-ға жіберу
     if (url.pathname === "/api/lead") {
       if (request.method !== "POST") {
         return new Response("Method not allowed", {
@@ -25,32 +25,35 @@ export default {
       const name = String(data.name || "").trim().slice(0, 100);
       const phone = String(data.phone || "").trim().slice(0, 40);
       const sport = String(data.sport || "").trim().slice(0, 100);
+      const age = String(data.age || "").trim().slice(0, 3);
       const message = String(data.message || "").trim().slice(0, 500);
 
       if (!name || !phone) {
         return Response.json(
-          { success: false, error: "Name and phone are required" },
+          { success: false, error: "Аты-жөні мен телефон қажет" },
           { status: 400 }
         );
       }
 
       if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_ID) {
         return Response.json(
-          { success: false, error: "Telegram is not configured" },
+          { success: false, error: "Telegram баптауы толық емес" },
           { status: 500 }
         );
       }
 
       const text = [
-        "🥊 TOKTAR FIGHT CLUB — Жаңа өтінім",
-        `👤 Аты: ${name}`,
+        "🥊 TOKTAR FIGHT CLUB — ЖАҢА ӨТІНІМ",
+        "",
+        `👤 Аты-жөні: ${name}`,
         `📞 Телефон: ${phone}`,
-        `🥋 Бағыты: ${sport || "Көрсетілмеген"}`,
-        `💬 Хабарлама: ${message || "Жоқ"}`
+        `🥋 Спорт түрі: ${sport || "Көрсетілмеген"}`,
+        `🎂 Жасы: ${age || "Көрсетілмеген"}`,
+        `💬 Қосымша ақпарат: ${message || "Жоқ"}`
       ].join("\n");
 
       try {
-        const response = await fetch(
+        const telegramResponse = await fetch(
           `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`,
           {
             method: "POST",
@@ -62,9 +65,9 @@ export default {
           }
         );
 
-        if (!response.ok) {
+        if (!telegramResponse.ok) {
           return Response.json(
-            { success: false, error: "Telegram delivery failed" },
+            { success: false, error: "Telegram хабарламаны қабылдамады" },
             { status: 502 }
           );
         }
@@ -72,12 +75,19 @@ export default {
         return Response.json({ success: true });
       } catch {
         return Response.json(
-          { success: false, error: "Telegram connection failed" },
+          { success: false, error: "Telegram байланысында қате" },
           { status: 502 }
         );
       }
     }
 
-    return env.ASSETS.fetch(request);
+    // Қалған сайт файлдарын көрсету
+    if (env.ASSETS) {
+      return env.ASSETS.fetch(request);
+    }
+
+    return new Response("Сайт файлдарына ASSETS байланысы қосылмаған", {
+      status: 500
+    });
   }
 };
