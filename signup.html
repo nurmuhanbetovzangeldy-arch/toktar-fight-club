@@ -31,5 +31,58 @@
 </main>
 <footer class="footer"><div class="wrap footer-inner"><span>© <span id="year"></span> TOKTAR FIGHT CLUB</span><a href="manager.html" class="staff-link">Қызметкерлерге кіру</a></div></footer>
 <script>document.getElementById('year').textContent=new Date().getFullYear();const b=document.getElementById('menuBtn');if(b)b.addEventListener('click',()=>document.getElementById('navlinks').classList.toggle('open'));</script>
+<script>
+(function () {
+  const form = document.getElementById("signupForm");
+  if (!form) return;
+
+  form.addEventListener("submit", async function (event) {
+    event.preventDefault();
+
+    const button = form.querySelector('button[type="submit"]');
+    const status = document.getElementById("signupMsg");
+
+    const payload = {
+      name: document.getElementById("clientName").value.trim(),
+      phone: document.getElementById("clientPhone").value.trim(),
+      sport: document.getElementById("clientSport").value,
+      age: document.getElementById("clientAge").value.trim(),
+      message: document.getElementById("clientNote").value.trim()
+    };
+
+    const oldText = button.textContent;
+    button.disabled = true;
+    button.textContent = "Жіберіліп жатыр...";
+    status.textContent = "Өтінім жіберіліп жатыр...";
+
+    try {
+      const response = await fetch("/api/lead", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || result.success !== true) {
+        throw new Error("Өтінім жіберілмеді");
+      }
+
+      status.textContent =
+        "Өтінім қабылданды! Біз сізбен хабарласамыз.";
+
+      form.reset();
+    } catch (error) {
+      status.textContent =
+        "Қате! Өтінім жіберілмеді. Кейін қайта көріңіз.";
+    } finally {
+      button.disabled = false;
+      button.textContent = oldText;
+    }
+  });
+})();
+</script>
 </body>
 </html>
