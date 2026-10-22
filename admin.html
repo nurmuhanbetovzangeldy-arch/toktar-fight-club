@@ -1,162 +1,172 @@
 
+
 <!DOCTYPE html>
 <html lang="kk">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Басқарушы — TOKTAR FIGHT CLUB</title>
+  <title>TOKTAR FIGHT CLUB — Бағаларды басқару</title>
   <style>
     * { box-sizing: border-box; }
     body {
-      margin: 0;
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      background: #0b0c0f;
-      color: #f5f5f6;
-      font-family: Arial, sans-serif;
-      padding: 20px;
+      margin: 0; padding: 24px; background: #0b0b0d;
+      color: #f8fafc; font-family: Arial, sans-serif;
     }
-    .card {
-      width: 100%;
-      max-width: 410px;
-      padding: 30px;
-      background: #17191f;
-      border: 1px solid #343640;
+    main {
+      max-width: 760px; margin: 30px auto; padding: 26px;
+      background: #17181d; border: 1px solid #343640;
       border-radius: 18px;
     }
-    h1 { font-size: 25px; margin-top: 0; }
-    p { color: #b7b8c0; line-height: 1.5; }
-    label { display: block; margin: 20px 0 8px; }
+    h1 { font-size: 27px; }
+    p { color: #b9bbc5; line-height: 1.6; }
+    .price {
+      padding: 18px 0; border-bottom: 1px solid #35363e;
+    }
+    label { display: block; margin: 12px 0 6px; }
     input {
-      width: 100%;
-      padding: 13px;
-      border-radius: 9px;
-      border: 1px solid #454752;
-      background: #0e1014;
-      color: white;
-      font-size: 16px;
+      width: 100%; padding: 12px; border-radius: 8px;
+      border: 1px solid #454752; background: #101115;
+      color: white; font-size: 16px;
     }
     button {
-      width: 100%;
-      margin-top: 16px;
-      padding: 13px;
-      border: 0;
-      border-radius: 9px;
-      background: #e52b37;
-      color: white;
-      font-weight: bold;
-      font-size: 16px;
-      cursor: pointer;
+      padding: 13px 18px; margin-top: 22px; border: 0;
+      border-radius: 9px; background: #ed2939; color: white;
+      font-weight: bold; font-size: 16px; cursor: pointer;
     }
-    #status { overflow-wrap: anywhere; }
-    .hidden { display: none; }
+    button:disabled { opacity: .6; }
+    #status { margin-top: 16px; white-space: pre-wrap; }
+    .secondary { background: #343640; margin-left: 8px; }
   </style>
 </head>
 <body>
-  <main class="card">
-    <h1>🥊 TOKTAR FIGHT CLUB</h1>
-    <p>Басқарушының кіру беті</p>
+<main>
+  <h1>🥊 TOKTAR FIGHT CLUB</h1>
+  <p>Әкімші бөлімі — спорт түрлерінің бағаларын өзгерту</p>
+  <p id="status">Бағалар жүктелуде...</p>
+  <div id="prices"></div>
+  <button id="save" disabled>Бағаларды сақтау</button>
+  <button class="secondary" id="logout">Жүйеден шығу</button>
+</main>
 
-    <form id="loginForm">
-      <label for="password">Құпиясөз</label>
-      <input
-        id="password"
-        type="password"
-        autocomplete="current-password"
-        required
-        maxlength="200"
-        placeholder="Құпиясөзді енгізіңіз"
-      >
-      <button type="submit">Кіру</button>
-    </form>
+<script>
+const statusBox = document.getElementById("status");
+const pricesBox = document.getElementById("prices");
+const saveButton = document.getElementById("save");
 
-    <section id="panel" class="hidden">
-      <h2>Кіру сәтті өтті!</h2>
-      <p>Басқарушы сессиясы расталды.</p>
-      <p>Бағаларды және басқа сайт мәліметтерін басқару функциялары әлі қосылмаған.</p>
-      <button id="logout" type="button">Жүйеден шығу</button>
-    </section>
+let prices = [];
 
-    <p id="status" role="status" aria-live="polite"></p>
-  </main>
-
-  <script>
-    const form = document.getElementById("loginForm");
-    const password = document.getElementById("password");
-    const panel = document.getElementById("panel");
-    const status = document.getElementById("status");
-
-    async function checkSession() {
-      try {
-        const response = await fetch("/api/admin/session", {
-          credentials: "same-origin",
-          cache: "no-store"
-        });
-        if (response.ok) {
-          form.classList.add("hidden");
-          panel.classList.remove("hidden");
-          status.textContent = "";
-        }
-      } catch {
-        status.textContent = "Серверге қосылу мүмкін болмады.";
-      }
+async function loadPrices() {
+  try {
+    const session = await fetch("/api/admin/session", {
+      credentials: "same-origin"
+    });
+    if (!session.ok) {
+      statusBox.textContent = "Әкімші сессиясы аяқталған. Қайта кіріңіз.";
+      return;
     }
 
-    form.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      status.textContent = "Тексеріліп жатыр...";
-      const button = form.querySelector("button");
-      button.disabled = true;
-
-      try {
-        const response = await fetch("/api/admin/login", {
-          method: "POST",
-          credentials: "same-origin",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ password: password.value })
-        });
-        const result = await response.json();
-
-        if (!response.ok || !result.success) {
-          status.textContent =
-            response.status === 401
-              ? "Құпиясөз қате."
-              : "Кіру мүмкін болмады. Сервер баптауын тексеріңіз.";
-          return;
-        }
-
-        password.value = "";
-        await checkSession();
-
-        if (panel.classList.contains("hidden")) {
-          status.textContent =
-            "Кіру расталмады. Cookie және сервер баптауын тексеріңіз.";
-        }
-      } catch {
-        status.textContent = "Серверге қосылу қатесі.";
-      } finally {
-        button.disabled = false;
-      }
+    const response = await fetch("/api/prices", {
+      credentials: "same-origin"
     });
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || "Бағаларды жүктеу сәтсіз");
+    }
 
-    document.getElementById("logout").addEventListener("click", async () => {
-      try {
-        const response = await fetch("/api/admin/logout", {
-          method: "POST",
-          credentials: "same-origin"
-        });
-        if (!response.ok) throw new Error("Logout failed");
+    prices = data.prices;
+    renderPrices();
+    statusBox.textContent = "Бағалар жүктелді.";
+    saveButton.disabled = false;
+  } catch (error) {
+    statusBox.textContent = "Қате: " + error.message;
+  }
+}
 
-        panel.classList.add("hidden");
-        form.classList.remove("hidden");
-        status.textContent = "Жүйеден шықтыңыз.";
-      } catch {
-        status.textContent = "Шығу мүмкін болмады. Қайта көріңіз.";
-      }
+function renderPrices() {
+  pricesBox.replaceChildren();
+
+  for (const price of prices) {
+    const section = document.createElement("section");
+    section.className = "price";
+
+    const heading = document.createElement("h2");
+    heading.textContent = price.name;
+    section.appendChild(heading);
+
+    const nameLabel = document.createElement("label");
+    nameLabel.textContent = "Спорт түрі";
+    const nameInput = document.createElement("input");
+    nameInput.value = price.name;
+    nameInput.maxLength = 100;
+    nameInput.addEventListener("input", () => {
+      price.name = nameInput.value;
+      heading.textContent = nameInput.value;
     });
+    section.append(nameLabel, nameInput);
 
-    checkSession();
-  </script>
+    const amountLabel = document.createElement("label");
+    amountLabel.textContent = "Айлық баға (теңге)";
+    const amountInput = document.createElement("input");
+    amountInput.type = "number";
+    amountInput.min = "0";
+    amountInput.max = "100000000";
+    amountInput.step = "1000";
+    amountInput.value = price.amount;
+    amountInput.addEventListener("input", () => {
+      price.amount = Number(amountInput.value);
+    });
+    section.append(amountLabel, amountInput);
+
+    const descriptionLabel = document.createElement("label");
+    descriptionLabel.textContent = "Сипаттамасы";
+    const descriptionInput = document.createElement("input");
+    descriptionInput.value = price.description || "";
+    descriptionInput.maxLength = 300;
+    descriptionInput.addEventListener("input", () => {
+      price.description = descriptionInput.value;
+    });
+    section.append(descriptionLabel, descriptionInput);
+
+    pricesBox.appendChild(section);
+  }
+}
+
+saveButton.addEventListener("click", async () => {
+  saveButton.disabled = true;
+  statusBox.textContent = "Сақталып жатыр...";
+
+  try {
+    const response = await fetch("/api/admin/prices", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prices })
+    });
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || "Сақтау сәтсіз");
+    }
+
+    prices = data.prices;
+    renderPrices();
+    statusBox.textContent = "Бағалар сәтті сақталды!";
+  } catch (error) {
+    statusBox.textContent = "Қате: " + error.message;
+  } finally {
+    saveButton.disabled = false;
+  }
+});
+
+document.getElementById("logout").addEventListener("click", async () => {
+  await fetch("/api/admin/logout", {
+    method: "POST",
+    credentials: "same-origin"
+  });
+  location.href = "/admin.html";
+});
+
+loadPrices();
+</script>
 </body>
 </html>
