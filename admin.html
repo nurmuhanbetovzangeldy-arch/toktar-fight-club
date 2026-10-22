@@ -1,0 +1,162 @@
+
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Басқарушы — TOKTAR FIGHT CLUB</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #0b0c0f;
+      color: #f5f5f6;
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    .card {
+      width: 100%;
+      max-width: 410px;
+      padding: 30px;
+      background: #17191f;
+      border: 1px solid #343640;
+      border-radius: 18px;
+    }
+    h1 { font-size: 25px; margin-top: 0; }
+    p { color: #b7b8c0; line-height: 1.5; }
+    label { display: block; margin: 20px 0 8px; }
+    input {
+      width: 100%;
+      padding: 13px;
+      border-radius: 9px;
+      border: 1px solid #454752;
+      background: #0e1014;
+      color: white;
+      font-size: 16px;
+    }
+    button {
+      width: 100%;
+      margin-top: 16px;
+      padding: 13px;
+      border: 0;
+      border-radius: 9px;
+      background: #e52b37;
+      color: white;
+      font-weight: bold;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    #status { overflow-wrap: anywhere; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>🥊 TOKTAR FIGHT CLUB</h1>
+    <p>Басқарушының кіру беті</p>
+
+    <form id="loginForm">
+      <label for="password">Құпиясөз</label>
+      <input
+        id="password"
+        type="password"
+        autocomplete="current-password"
+        required
+        maxlength="200"
+        placeholder="Құпиясөзді енгізіңіз"
+      >
+      <button type="submit">Кіру</button>
+    </form>
+
+    <section id="panel" class="hidden">
+      <h2>Кіру сәтті өтті!</h2>
+      <p>Басқарушы сессиясы расталды.</p>
+      <p>Бағаларды және басқа сайт мәліметтерін басқару функциялары әлі қосылмаған.</p>
+      <button id="logout" type="button">Жүйеден шығу</button>
+    </section>
+
+    <p id="status" role="status" aria-live="polite"></p>
+  </main>
+
+  <script>
+    const form = document.getElementById("loginForm");
+    const password = document.getElementById("password");
+    const panel = document.getElementById("panel");
+    const status = document.getElementById("status");
+
+    async function checkSession() {
+      try {
+        const response = await fetch("/api/admin/session", {
+          credentials: "same-origin",
+          cache: "no-store"
+        });
+        if (response.ok) {
+          form.classList.add("hidden");
+          panel.classList.remove("hidden");
+          status.textContent = "";
+        }
+      } catch {
+        status.textContent = "Серверге қосылу мүмкін болмады.";
+      }
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      status.textContent = "Тексеріліп жатыр...";
+      const button = form.querySelector("button");
+      button.disabled = true;
+
+      try {
+        const response = await fetch("/api/admin/login", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password: password.value })
+        });
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          status.textContent =
+            response.status === 401
+              ? "Құпиясөз қате."
+              : "Кіру мүмкін болмады. Сервер баптауын тексеріңіз.";
+          return;
+        }
+
+        password.value = "";
+        await checkSession();
+
+        if (panel.classList.contains("hidden")) {
+          status.textContent =
+            "Кіру расталмады. Cookie және сервер баптауын тексеріңіз.";
+        }
+      } catch {
+        status.textContent = "Серверге қосылу қатесі.";
+      } finally {
+        button.disabled = false;
+      }
+    });
+
+    document.getElementById("logout").addEventListener("click", async () => {
+      try {
+        const response = await fetch("/api/admin/logout", {
+          method: "POST",
+          credentials: "same-origin"
+        });
+        if (!response.ok) throw new Error("Logout failed");
+
+        panel.classList.add("hidden");
+        form.classList.remove("hidden");
+        status.textContent = "Жүйеден шықтыңыз.";
+      } catch {
+        status.textContent = "Шығу мүмкін болмады. Қайта көріңіз.";
+      }
+    });
+
+    checkSession();
+  </script>
+</body>
+</html>
